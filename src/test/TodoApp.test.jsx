@@ -1,112 +1,86 @@
-// import "@testing-library/jest-dom";
-// import { fireEvent, render, screen } from "@testing-library/react";
-// import TodoApp from "../components/TodoApp";
+import "@testing-library/jest-dom";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, test } from "vitest";
+import TodoApp from "../components/TodoApp";
 
-// jest.spyOn(window, "alert").mockImplementation(() => {}); // mock alert nếu cần
+describe("TodoApp", () => {
+  test("should add a new todo", () => {
+    render(<TodoApp />);
 
-// describe("TodoApp", () => {
-//   test("renders initial todo list with input and button", () => {
-//     render(<TodoApp />);
+    const input = screen.getByTestId("todo-input");
+    const addButton = screen.getByTestId("add-todo-button");
 
-//     expect(screen.getByTestId("todo-input")).toBeInTheDocument();
-//     expect(screen.getByTestId("add-button")).toBeInTheDocument();
-//     expect(screen.getByTestId("todo-list")).toBeInTheDocument();
-//   });
+    fireEvent.change(input, { target: { value: "New Task" } });
+    fireEvent.click(addButton);
 
-//   test("can add a new todo", () => {
-//     render(<TodoApp />);
+    const todoId = Date.now(); // This will be close to the actual ID
+    const todoText = screen.getByTestId(`todo-text-${todoId}`);
+    expect(todoText).toHaveTextContent("New Task");
+  });
 
-//     const input = screen.getByTestId("todo-input");
-//     const addButton = screen.getByTestId("add-button");
+  test("should mark a todo as completed", () => {
+    render(<TodoApp />);
 
-//     fireEvent.change(input, { target: { value: "Learn Testing" } });
-//     fireEvent.click(addButton);
+    // Add a new todo first
+    const input = screen.getByTestId("todo-input");
+    const addButton = screen.getByTestId("add-todo-button");
 
-//     expect(screen.getByText("Learn Testing")).toBeInTheDocument();
-//   });
+    fireEvent.change(input, { target: { value: "Complete Task" } });
+    fireEvent.click(addButton);
 
-//   test("does not add empty todo", () => {
-//     render(<TodoApp />);
+    const todoId = Date.now(); // This will be close to the actual ID
+    const checkbox = screen.getByTestId(`todo-checkbox-${todoId}`);
+    const todoText = screen.getByTestId(`todo-text-${todoId}`);
 
-//     const addButton = screen.getByTestId("add-button");
-//     fireEvent.click(addButton);
+    fireEvent.click(checkbox);
 
-//     expect(window.alert).toHaveBeenCalledWith("Todo cannot be empty");
-//   });
+    expect(checkbox).toBeChecked();
+    expect(todoText).toHaveClass("line-through");
+  });
 
-//   test("can mark todo as complete and incomplete", () => {
-//     render(<TodoApp />);
+  test("should remove a todo", () => {
+    render(<TodoApp />);
 
-//     const input = screen.getByTestId("todo-input");
-//     const addButton = screen.getByTestId("add-button");
+    const input = screen.getByTestId("todo-input");
+    const addButton = screen.getByTestId("add-todo-button");
 
-//     fireEvent.change(input, { target: { value: "Test Checkbox" } });
-//     fireEvent.click(addButton);
+    fireEvent.change(input, { target: { value: "Delete Task" } });
+    fireEvent.click(addButton);
 
-//     const todoText = screen.getByTestId("todo-text-0");
-//     expect(todoText).not.toHaveClass("line-through");
+    const todoId = Date.now(); // This will be close to the actual ID
+    const deleteButton = screen.getByTestId(`delete-todo-${todoId}`);
+    const todoText = screen.getByTestId(`todo-text-${todoId}`);
 
-//     fireEvent.click(todoText);
-//     expect(todoText).toHaveClass("line-through");
+    fireEvent.click(deleteButton);
 
-//     fireEvent.click(todoText);
-//     expect(todoText).not.toHaveClass("line-through");
-//   });
+    expect(todoText).not.toBeInTheDocument();
+  });
 
-//   test("can edit a todo", () => {
-//     render(<TodoApp />);
+  test("should edit a todo", () => {
+    render(<TodoApp />);
 
-//     const input = screen.getByTestId("todo-input");
-//     const addButton = screen.getByTestId("add-button");
+    // Add a new todo
+    const input = screen.getByTestId("todo-input");
+    const addButton = screen.getByTestId("add-todo-button");
 
-//     fireEvent.change(input, { target: { value: "Old Todo" } });
-//     fireEvent.click(addButton);
+    fireEvent.change(input, { target: { value: "Original Task" } });
+    fireEvent.click(addButton);
 
-//     const editButton = screen.getByTestId("edit-todo-0");
-//     fireEvent.click(editButton);
+    const todoId = Date.now(); // This will be close to the actual ID
+    const editButton = screen.getByTestId(`edit-todo-${todoId}`);
 
-//     const editInput = screen.getByTestId("edit-input-0");
-//     fireEvent.change(editInput, { target: { value: "Updated Todo" } });
+    // Click edit button
+    fireEvent.click(editButton);
 
-//     const saveButton = screen.getByTestId("save-todo-0");
-//     fireEvent.click(saveButton);
+    // Input should now have the original text
+    expect(input).toHaveValue("Original Task");
 
-//     expect(screen.getByText("Updated Todo")).toBeInTheDocument();
-//     expect(screen.queryByText("Old Todo")).not.toBeInTheDocument();
-//   });
+    // Change the text
+    fireEvent.change(input, { target: { value: "Updated Task" } });
+    fireEvent.click(addButton);
 
-//   test("can delete a todo", () => {
-//     render(<TodoApp />);
-
-//     const input = screen.getByTestId("todo-input");
-//     const addButton = screen.getByTestId("add-button");
-
-//     fireEvent.change(input, { target: { value: "To Be Deleted" } });
-//     fireEvent.click(addButton);
-
-//     const deleteButton = screen.getByTestId("delete-todo-0");
-//     fireEvent.click(deleteButton);
-
-//     expect(screen.queryByText("To Be Deleted")).not.toBeInTheDocument();
-//   });
-
-//   test("handles multiple todos correctly", () => {
-//     render(<TodoApp />);
-
-//     const input = screen.getByTestId("todo-input");
-//     const addButton = screen.getByTestId("add-button");
-
-//     fireEvent.change(input, { target: { value: "Todo 1" } });
-//     fireEvent.click(addButton);
-
-//     fireEvent.change(input, { target: { value: "Todo 2" } });
-//     fireEvent.click(addButton);
-
-//     fireEvent.change(input, { target: { value: "Todo 3" } });
-//     fireEvent.click(addButton);
-
-//     expect(screen.getByText("Todo 1")).toBeInTheDocument();
-//     expect(screen.getByText("Todo 2")).toBeInTheDocument();
-//     expect(screen.getByText("Todo 3")).toBeInTheDocument();
-//   });
-// });
+    // Verify the text was updated
+    const todoText = screen.getByTestId(`todo-text-${todoId}`);
+    expect(todoText).toHaveTextContent("Updated Task");
+  });
+});

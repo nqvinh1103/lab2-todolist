@@ -1,46 +1,105 @@
 import { Pencil, Trash2 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import todoService from "../services/todoService";
 
 export default function TodoApp() {
-  const [todos, setTodos] = useState([
-    { id: 1, text: "Learn React Testing", completed: false },
-    { id: 2, text: "Write Unit Tests", completed: true },
-    { id: 3, text: "Practice TDD", completed: false },
-  ]);
+  const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState("");
   const [editId, setEditId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleAddTodo = () => {
-    if (newTodo.trim() === "") return;
-    if (editId) {
-      setTodos(
-        todos.map((todo) =>
-          todo.id === editId ? { ...todo, text: newTodo } : todo
-        )
-      );
-      setEditId(null);
-    } else {
-      setTodos([...todos, { id: Date.now(), text: newTodo, completed: false }]);
+  // Fetch todos on component mount
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
+  const fetchTodos = async () => {
+    try {
+      const data = await todoService.getAllTodos();
+      setTodos(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching todos:", error);
+      setError(error.response?.data?.message || "Failed to fetch todos");
+      setLoading(false);
     }
-    setNewTodo("");
   };
 
-  const handleToggleComplete = (id) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+  const handleAddTodo = async () => {
+    if (newTodo.trim() === "") return;
+    try {
+      if (editId) {
+        const updatedTodo = {
+          text: newTodo,
+          completed: todos.find((t) => t.id === editId)?.completed || false,
+        };
+        const response = await todoService.updateTodo(
+          Number(editId),
+          updatedTodo
+        );
+        setTodos((prevTodos) =>
+          prevTodos.map((todo) => (todo.id === editId ? response : todo))
+        );
+        setEditId(null);
+      } else {
+        const newTodoItem = {
+          text: newTodo,
+          completed: false,
+        };
+        const createdTodo = await todoService.createTodo(newTodoItem);
+        setTodos((prevTodos) => [...prevTodos, createdTodo]);
+      }
+      setNewTodo("");
+      setError(null);
+    } catch (error) {
+      console.error("Error saving todo:", error);
+      setError(error.response?.data?.message || "Failed to save todo");
+    }
+  };
+
+  const handleToggleComplete = async (id) => {
+    try {
+      const todo = todos.find((t) => t.id === id);
+      const updatedTodo = {
+        text: todo.text,
+        completed: !todo.completed,
+      };
+      const response = await todoService.updateTodo(Number(id), updatedTodo);
+      setTodos((prevTodos) =>
+        prevTodos.map((todo) => (todo.id === id ? response : todo))
+      );
+      setError(null);
+    } catch (error) {
+      console.error("Error updating todo:", error);
+      setError(error.response?.data?.message || "Failed to update todo");
+    }
   };
 
   const handleEdit = (todo) => {
     setNewTodo(todo.text);
     setEditId(todo.id);
+    setError(null);
   };
 
-  const handleDelete = (id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      if (!id) {
+        setError("Invalid todo ID");
+        return;
+      }
+      await todoService.deleteTodo(id);
+      setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== id));
+      setError(null);
+    } catch (error) {
+      console.error("Error deleting todo:", error);
+      setError(error.response?.data?.message || "Failed to delete todo");
+    }
   };
+
+  if (loading) {
+    return <div className="text-center">Loading...</div>;
+  }
 
   return (
     <div
@@ -53,6 +112,9 @@ export default function TodoApp() {
       >
         Todo List
       </h1>
+      {error && (
+        <div className="bg-red-100 text-red-700 p-2 rounded mb-4">{error}</div>
+      )}
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -67,7 +129,7 @@ export default function TodoApp() {
           className="bg-blue-500 text-white px-4 py-2 rounded-lg"
           data-testid="add-todo-button"
         >
-          {editId ? "Update" : "+ Add"}
+          {editId ? "Update" : "Add"}
         </button>
       </div>
       <ul className="space-y-2" data-testid="todo-list">
