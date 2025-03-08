@@ -54,9 +54,9 @@ class ToDoListServiceTest {
         // Given
         ToDoListRequest request = new ToDoListRequest();
         request.setText("Test Todo");
-        
+
         given(toDoListRepository.save(any(ToDoList.class))).willReturn(toDoList);
-        given(toDoListMapper.toResponse(any(ToDoList.class))).willReturn(toDoListResponse);
+        //given(toDoListMapper.toResponse(any(ToDoList.class))).willReturn(toDoListResponse);
 
         // When
         ToDoListResponse savedTodo = toDoListService.create(request);
@@ -71,7 +71,7 @@ class ToDoListServiceTest {
     void whenGetAllToDoList_thenReturnToDoListResponseList() {
         // Given
         given(toDoListRepository.findAll()).willReturn(Arrays.asList(toDoList));
-        given(toDoListMapper.toResponse(any(ToDoList.class))).willReturn(toDoListResponse);
+        //given(toDoListMapper.toResponse(any(ToDoList.class))).willReturn(toDoListResponse);
 
         // When
         List<ToDoListResponse> todoList = toDoListService.getAll();
@@ -90,7 +90,7 @@ class ToDoListServiceTest {
 
         given(toDoListRepository.findById(1)).willReturn(Optional.of(toDoList));
         given(toDoListRepository.save(any(ToDoList.class))).willReturn(toDoList);
-        given(toDoListMapper.toResponse(any(ToDoList.class))).willReturn(toDoListResponse);
+        //given(toDoListMapper.toResponse(any(ToDoList.class))).willReturn(toDoListResponse);
 
         // When
         ToDoListResponse updatedTodo = toDoListService.update(1, request);
@@ -111,4 +111,4 @@ class ToDoListServiceTest {
         // Then
         verify(toDoListRepository).delete(toDoList);
     }
-} 
+}
