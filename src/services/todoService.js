@@ -23,7 +23,7 @@ const todoService = {
 
   createTodo: async (todo) => {
     try {
-      const response = await api.post("/", {
+      const response = await api.post("", {
         text: todo.text,
         completed: todo.completed || false,
       });

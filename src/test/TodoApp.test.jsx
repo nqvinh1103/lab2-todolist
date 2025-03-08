@@ -1,11 +1,35 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import TodoApp from "../components/TodoApp";
 
+// Mock the entire todoService module
+vi.mock("../services/todoService", () => ({
+  default: {
+    getAllTodos: vi.fn(() => Promise.resolve([])),
+    createTodo: vi.fn((todo) => Promise.resolve({ ...todo, id: Date.now() })),
+    updateTodo: vi.fn((id, todo) => Promise.resolve({ ...todo, id })),
+    deleteTodo: vi.fn(() => Promise.resolve()),
+  },
+}));
+
 describe("TodoApp", () => {
-  test("should add a new todo", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("should render loading state initially", () => {
     render(<TodoApp />);
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
+  });
+
+  test("should add a new todo", async () => {
+    render(<TodoApp />);
+
+    // Wait for loading to finish
+    await waitFor(() => {
+      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    });
 
     const input = screen.getByTestId("todo-input");
     const addButton = screen.getByTestId("add-todo-button");
@@ -13,33 +37,45 @@ describe("TodoApp", () => {
     fireEvent.change(input, { target: { value: "New Task" } });
     fireEvent.click(addButton);
 
-    const todoId = Date.now(); // This will be close to the actual ID
-    const todoText = screen.getByTestId(`todo-text-${todoId}`);
-    expect(todoText).toHaveTextContent("New Task");
+    await waitFor(() => {
+      expect(screen.getByText("New Task")).toBeInTheDocument();
+    });
   });
 
-  test("should mark a todo as completed", () => {
+  test("should mark a todo as completed", async () => {
     render(<TodoApp />);
 
-    // Add a new todo first
+    // Wait for loading to finish
+    await waitFor(() => {
+      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    });
+
     const input = screen.getByTestId("todo-input");
     const addButton = screen.getByTestId("add-todo-button");
 
     fireEvent.change(input, { target: { value: "Complete Task" } });
     fireEvent.click(addButton);
 
-    const todoId = Date.now(); // This will be close to the actual ID
-    const checkbox = screen.getByTestId(`todo-checkbox-${todoId}`);
-    const todoText = screen.getByTestId(`todo-text-${todoId}`);
+    await waitFor(() => {
+      const todoText = screen.getByText("Complete Task");
+      const checkbox = todoText.parentElement.querySelector(
+        'input[type="checkbox"]'
+      );
 
-    fireEvent.click(checkbox);
+      fireEvent.click(checkbox);
 
-    expect(checkbox).toBeChecked();
-    expect(todoText).toHaveClass("line-through");
+      expect(checkbox).toBeChecked();
+      expect(todoText.className).toContain("line-through");
+    });
   });
 
-  test("should remove a todo", () => {
+  test("should remove a todo", async () => {
     render(<TodoApp />);
+
+    // Wait for loading to finish
+    await waitFor(() => {
+      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    });
 
     const input = screen.getByTestId("todo-input");
     const addButton = screen.getByTestId("add-todo-button");
@@ -47,40 +83,50 @@ describe("TodoApp", () => {
     fireEvent.change(input, { target: { value: "Delete Task" } });
     fireEvent.click(addButton);
 
-    const todoId = Date.now(); // This will be close to the actual ID
-    const deleteButton = screen.getByTestId(`delete-todo-${todoId}`);
-    const todoText = screen.getByTestId(`todo-text-${todoId}`);
+    await waitFor(async () => {
+      const todoText = screen.getByText("Delete Task");
+      const deleteButton =
+        todoText.parentElement.querySelector("button:last-child");
 
-    fireEvent.click(deleteButton);
+      fireEvent.click(deleteButton);
 
-    expect(todoText).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText("Delete Task")).not.toBeInTheDocument();
+      });
+    });
   });
 
-  test("should edit a todo", () => {
+  test("should edit a todo", async () => {
     render(<TodoApp />);
 
-    // Add a new todo
+    // Wait for loading to finish
+    await waitFor(() => {
+      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    });
+
     const input = screen.getByTestId("todo-input");
     const addButton = screen.getByTestId("add-todo-button");
 
     fireEvent.change(input, { target: { value: "Original Task" } });
     fireEvent.click(addButton);
 
-    const todoId = Date.now(); // This will be close to the actual ID
-    const editButton = screen.getByTestId(`edit-todo-${todoId}`);
+    await waitFor(async () => {
+      const todoText = screen.getByText("Original Task");
+      const editButton = todoText.parentElement.querySelector(
+        "button:first-of-type"
+      );
 
-    // Click edit button
-    fireEvent.click(editButton);
+      fireEvent.click(editButton);
 
-    // Input should now have the original text
-    expect(input).toHaveValue("Original Task");
+      expect(input).toHaveValue("Original Task");
 
-    // Change the text
-    fireEvent.change(input, { target: { value: "Updated Task" } });
-    fireEvent.click(addButton);
+      fireEvent.change(input, { target: { value: "Updated Task" } });
+      fireEvent.click(addButton);
 
-    // Verify the text was updated
-    const todoText = screen.getByTestId(`todo-text-${todoId}`);
-    expect(todoText).toHaveTextContent("Updated Task");
+      await waitFor(() => {
+        expect(screen.getByText("Updated Task")).toBeInTheDocument();
+        expect(screen.queryByText("Original Task")).not.toBeInTheDocument();
+      });
+    });
   });
 });
